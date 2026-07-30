@@ -29,12 +29,17 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [trip, setTrip] = useState<TripData | null>(null);
   const [error, setError] = useState('');
+  
+  // NEW: State for saving the trip to the database
+  const [saving, setSaving] = useState(false);
+  const [savedSuccess, setSavedSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
     setTrip(null);
+    setSavedSuccess(false); // Reset save state on new generation
 
     try {
       const res = await fetch('/api/generate-trip', {
@@ -54,6 +59,37 @@ export default function Home() {
       setError('Something went wrong. Please try again.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  // NEW: Function to send the generated trip to your database
+  const handleSaveTrip = async () => {
+    if (!trip) return;
+    setSaving(true);
+    setSavedSuccess(false);
+
+    try {
+      const res = await fetch('/api/save-trip', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          destination: trip.destination,
+          budget: trip.budget,
+          days,
+          itinerary: trip.itinerary,
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setSavedSuccess(true);
+      } else {
+        alert('Failed to save trip.');
+      }
+    } catch (err) {
+      alert('An error occurred while saving.');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -128,9 +164,20 @@ export default function Home() {
         {/* Trip Itinerary Display */}
         {trip && (
           <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-slate-900">
-              {trip.destination} Itinerary ({trip.budget} Budget)
-            </h2>
+            
+            {/* NEW: Updated Header with Save Button */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <h2 className="text-2xl font-bold text-slate-900">
+                {trip.destination} Itinerary ({trip.budget} Budget)
+              </h2>
+              <button
+                onClick={handleSaveTrip}
+                disabled={saving || savedSuccess}
+                className="bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded-lg font-medium transition duration-200 disabled:opacity-50 whitespace-nowrap"
+              >
+                {saving ? 'Saving...' : savedSuccess ? 'Saved! ✓' : 'Save Trip'}
+              </button>
+            </div>
 
             {trip.itinerary.map((dayPlan) => (
               <div key={dayPlan.day} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 space-y-4">

@@ -9,11 +9,13 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@prisma/client": "^7.9.1",
+    "@prisma/client": "^6.19.3",
+    "@prisma/config": "^7.9.1",
+    "dotenv": "^17.4.2",
     "groq-sdk": "^1.4.0",
     "next": "16.2.12",
     "openai": "^7.0.0",
-    "prisma": "^7.9.1",
+    "prisma": "^6.19.3",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
