@@ -1,3 +1,4 @@
+import { Trip } from '@prisma/client';
 import { prisma } from '@/app/lib/prisma';
 import Link from 'next/link';
 
@@ -35,7 +36,7 @@ export default async function TripsDashboard() {
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trips.map((trip) => (
+            {trips.map((trip: Trip) => (
               <div key={trip.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full hover:shadow-md transition">
                 <div className="mb-4">
                   <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wide">

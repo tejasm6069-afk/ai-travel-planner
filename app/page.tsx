@@ -1,6 +1,9 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
+// 1. Removed SignedIn/SignedOut, added useUser
+import { SignInButton, UserButton, useUser } from '@clerk/nextjs'; 
 
 // Define TypeScript interfaces matching our API response structure
 interface Activity {
@@ -23,6 +26,9 @@ interface TripData {
 }
 
 export default function Home() {
+  // 2. Added the Clerk user hook to manually check auth state
+  const { isSignedIn, isLoaded } = useUser(); 
+
   const [destination, setDestination] = useState('');
   const [budget, setBudget] = useState('Moderate');
   const [days, setDays] = useState(3);
@@ -30,7 +36,6 @@ export default function Home() {
   const [trip, setTrip] = useState<TripData | null>(null);
   const [error, setError] = useState('');
   
-  // NEW: State for saving the trip to the database
   const [saving, setSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
@@ -39,7 +44,7 @@ export default function Home() {
     setLoading(true);
     setError('');
     setTrip(null);
-    setSavedSuccess(false); // Reset save state on new generation
+    setSavedSuccess(false);
 
     try {
       const res = await fetch('/api/generate-trip', {
@@ -62,7 +67,6 @@ export default function Home() {
     }
   };
 
-  // NEW: Function to send the generated trip to your database
   const handleSaveTrip = async () => {
     if (!trip) return;
     setSaving(true);
@@ -95,14 +99,40 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6 md:p-12">
+      
+      {/* 3. Updated Navigation Bar using the hook instead of wrappers */}
+      <nav className="max-w-4xl mx-auto flex justify-end items-center gap-4 mb-8 min-h-[40px]">
+        
+        {/* Shows ONLY when Clerk has loaded AND user is logged out */}
+        {isLoaded && !isSignedIn && (
+          <SignInButton mode="modal">
+            <button className="bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-5 rounded-lg shadow-sm transition duration-200 text-sm">
+              Sign In
+            </button>
+          </SignInButton>
+        )}
+
+        {/* Shows ONLY when Clerk has loaded AND user is logged in */}
+        {isLoaded && isSignedIn && (
+          <>
+            <Link 
+              href="/trips"
+              className="bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 font-semibold py-2 px-4 rounded-lg shadow-sm transition duration-200 flex items-center gap-2 text-sm"
+            >
+              My Saved Trips →
+            </Link>
+            
+            <UserButton />
+          </>
+        )}
+      </nav>
+
       <div className="max-w-4xl mx-auto space-y-8">
-        {/* Header */}
         <header className="text-center space-y-2">
           <h1 className="text-4xl font-extrabold text-slate-900">AI Travel Planner</h1>
           <p className="text-slate-600">Plan your dream trip in seconds with structured AI recommendations.</p>
         </header>
 
-        {/* Form Card */}
         <div className="bg-white p-6 rounded-xl shadow-md border border-slate-200">
           <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -154,18 +184,14 @@ export default function Home() {
           </form>
         </div>
 
-        {/* Error Display */}
         {error && (
           <div className="p-4 bg-red-50 text-red-700 border border-red-200 rounded-lg">
             {error}
           </div>
         )}
 
-        {/* Trip Itinerary Display */}
         {trip && (
           <div className="space-y-6">
-            
-            {/* NEW: Updated Header with Save Button */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-2xl font-bold text-slate-900">
                 {trip.destination} Itinerary ({trip.budget} Budget)

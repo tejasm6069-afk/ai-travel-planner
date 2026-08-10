@@ -1,8 +1,9 @@
 import { prisma } from '@/app/lib/prisma';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
+import DeleteButton from './DeleteButton';
 
-// Define the interface matching your JSON itinerary structure
+// Define the interfaces matching your JSON itinerary structure
 interface Activity {
   timeOfDay: string;
   placeName: string;
@@ -21,7 +22,9 @@ interface Props {
 }
 
 export default async function TripDetailsPage({ params }: Props) {
-  const { id } = await params;
+  // Await the params object for Next.js 15 compatibility
+  const resolvedParams = await params;
+  const id = resolvedParams.id;
 
   // Fetch the specific trip from Supabase using its unique ID
   const trip = await prisma.trip.findUnique({
@@ -40,14 +43,15 @@ export default async function TripDetailsPage({ params }: Props) {
     <main className="min-h-screen bg-slate-50 p-6 md:p-12">
       <div className="max-w-4xl mx-auto space-y-8">
         
-        {/* Navigation / Back Button */}
-        <div>
+        {/* Navigation & Delete Action */}
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <Link
             href="/trips"
-            className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1"
+            className="text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center gap-1 transition"
           >
             ← Back to Saved Trips
           </Link>
+          <DeleteButton tripId={trip.id} />
         </div>
 
         {/* Trip Header Banner */}
