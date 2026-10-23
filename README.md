@@ -1,30 +1,31 @@
-# roam. Travel planner
+# ✈️ Roam: AI Travel Planner
 
-A Next.js travel app with destination discovery, a personal AI planner, private saved trips, wishlist, budget tools, packing checklist, notes, maps links, and itinerary export.
+**Live Application:** [https://roam-travel-planner-tau.vercel.app/](https://roam-travel-planner-tau.vercel.app/)
 
-## Run locally
+Roam is a full-stack, AI-powered travel itinerary generator. It allows users to input their dream destination, budget, and trip duration to receive a fully structured, day-by-day travel plan. Users can authenticate, save their favorite itineraries to a secure database, and manage their trips via a personalized dashboard.
 
-1. Install Node.js 22 or newer and run `npm install`.
-2. Copy `.env.example` to `.env.local` and supply your own Clerk, Groq, and PostgreSQL credentials.
-3. Run `npx prisma migrate deploy` against your new development database, then `npm run dev`.
-4. Visit http://localhost:3000.
+## ✨ Key Features
 
-Never commit credentials. The source ZIP intentionally excludes them.
+* **AI-Powered Itinerary Generation:** Dynamically creates detailed, day-by-day trip plans including activities, time of day, descriptions, and estimated costs.
+* **Secure Authentication:** Complete user login and registration flows powered by Clerk.
+* **Personalized Dashboard:** A protected route where authenticated users can view their saved trips.
+* **Full CRUD Functionality:** Users can generate (Create), view (Read), and delete (Delete) their saved itineraries.
+* **Responsive UI:** A clean, modern interface built with Tailwind CSS that works seamlessly across desktop and mobile devices.
 
-## Checks
+## 🛠️ Tech Stack & Tools
 
-- `npm run lint`
-- `npm test`
-- `npm run build`
-- `node tests/check-ai.mjs` calls the live AI service and consumes API usage.
-- `node tests/check-services.mjs` checks database ownership with a rolled-back transaction and calls the AI service.
+* **Framework:** Next.js (App Router)
+* **Language:** TypeScript
+* **Styling:** Tailwind CSS
+* **Authentication:** Clerk
+* **Database:** PostgreSQL (hosted on Supabase)
+* **ORM:** Prisma
+* **Deployment:** Vercel
 
-## Deploy
+## 🧠 Behind the Scenes: How It Works
 
-Link the project to Vercel, configure the variables listed in `.env.example`, initialize the new PostgreSQL database, then deploy with `vercel --prod`. Use production Clerk keys and configure the deployed domain in Clerk before a public release.
-
-## Current limitations
-
-The Neon database is provisioned in tejas-48fb and its initial migration is applied. Live app: https://roam-travel-planner-tau.vercel.app. Vercel production deployment and public page/API smoke checks passed. The old database is unreachable; existing records have not been migrated. Current Clerk credentials are development credentials. AI prices and schedules are estimates, not live booking data. Wishlist, notes, and packing progress are stored in the current browser. Generation throttling is per server instance; use a shared rate limiter before a large public launch.
-
-
+1. **Client-Side Request:** The user interacts with the React frontend, selecting their destination, budget, and trip length.
+2. **AI Processing:** A Next.js API route (`/api/generate-trip`) processes this request and calls a Generative AI model. The prompt is strictly engineered to return the itinerary in a structured JSON format.
+3. **Authentication Verification:** When a user decides to save a trip, the `/api/save-trip` endpoint intercepts the request. It uses Clerk's `auth()` to verify the user's session and extract their unique `userId`.
+4. **Database Transaction:** Using Prisma ORM, the application maps the structured AI response and the `userId` to the PostgreSQL database hosted on Supabase.
+5. **Data Retrieval:** When the user navigates to `/trips`, a server-side component queries the database for records specifically matching their `userId`, rendering the dynamic dashboard.
