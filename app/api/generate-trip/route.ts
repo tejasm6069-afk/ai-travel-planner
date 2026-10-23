@@ -1,62 +1,25 @@
 import { NextResponse } from 'next/server';
-import Groq from 'groq-sdk';
+import { plannerSchema } from '@/app/lib/trip-schema';
+import { generateTrip } from '@/app/lib/generation';
+import { apiError, readJson, RequestError, requireUser } from '@/app/lib/api';
 
-// Initialize Groq
-const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
+export const runtime = 'nodejs';
+export const maxDuration = 60;
+// Per-instance burst protection. Use shared Redis for a global multi-instance quota.
+const requests = new Map<string, { count: number; reset: number }>();
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { destination, budget, days } = await req.json();
-
-    // We explicitly define the JSON blueprint in the prompt so Groq knows exactly how to format the data
-    const prompt = `
-      You are an expert travel planner. Create a ${days}-day itinerary for ${destination} on a ${budget} budget.
-      Return ONLY a valid JSON object matching this exact structure:
-      {
-        "destination": "${destination}",
-        "budget": "${budget}",
-        "itinerary": [
-          {
-            "day": 1,
-            "theme": "A short theme for the day",
-            "activities": [
-              {
-                "timeOfDay": "Morning",
-                "placeName": "Exact name of location for Google Maps",
-                "description": "A 1-2 sentence description of what to do there",
-                "estimatedCost": "Cost in local currency"
-              }
-            ]
-          }
-        ]
-      }
-    `;
-
-    const completion = await groq.chat.completions.create({
-      model: 'openai/gpt-oss-20b', // A highly capable and fast model
-      messages: [
-        { 
-          role: 'system', 
-          content: 'You output logical, geographically optimized travel itineraries. You must respond in valid JSON format.' 
-        },
-        { 
-          role: 'user', 
-          content: prompt 
-        },
-      ],
-      // This forces Groq to only output parsable JSON
-      response_format: { type: 'json_object' }, 
-    });
-
-    // Parse the resulting string into a real JSON object for the frontend
-    const tripData = JSON.parse(completion.choices[0]?.message?.content || '{}');
-    return NextResponse.json({ success: true, data: tripData });
-
-  } catch (error) {
-    console.error("Error generating trip with Groq:", error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to generate itinerary' }, 
-      { status: 500 }
-    );
-  }
+    const userId = await requireUser();
+    const input = plannerSchema.safeParse(await readJson(request, 8_000));
+    if (!input.success) throw new RequestError(input.error.issues[0].message);
+    const now = Date.now();
+    for (const [key, value] of requests) if (value.reset < now) requests.delete(key);
+    const limit = requests.get(userId) ?? { count: 0, reset: now + 60_000 };
+    if (limit.count >= 3) return NextResponse.json({ success: false, error: 'You’ve planned a few adventures! Please wait a minute and try again.' }, { status: 429, headers: { 'Retry-After': String(Math.ceil((limit.reset - now) / 1000)) } });
+    if (!process.env.GROQ_API_KEY) throw new RequestError('The AI planner is temporarily unavailable. Explore the sample itinerary while we reconnect.', 503);
+    requests.set(userId, { ...limit, count: limit.count + 1 });
+    const trip = await generateTrip(input.data);
+    return NextResponse.json({ success: true, data: trip }, { headers: { 'Cache-Control': 'no-store' } });
+  } catch (error) { return apiError(error, 'We couldn’t create your trip right now. Please try again shortly.'); }
 }

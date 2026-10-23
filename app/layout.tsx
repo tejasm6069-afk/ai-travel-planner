@@ -1,37 +1,16 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
-import "./globals.css";
-import { ClerkProvider } from '@clerk/nextjs'; // 1. Added Clerk import
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+import type { Metadata } from 'next';
+import { ClerkProvider } from '@clerk/nextjs';
+import Shell from './components/shell';
+import './globals.css';
 
 export const metadata: Metadata = {
-  title: "AI Travel Planner", // Updated your title!
-  description: "Plan your dream trip in seconds",
+  title: 'roam. — A trip that feels like you',
+  description: 'Discover your next adventure. Create personal AI travel itineraries, save your favorite places, and bring every day of your trip together.',
+  applicationName: 'roam.',
+  icons: { icon: '/icon.svg' },
 };
-
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
-  return (
-    // 2. Wrapped the entire HTML in ClerkProvider
-    <ClerkProvider>
-      <html
-        lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
-      >
-        <body className="min-h-full flex flex-col">{children}</body>
-      </html>
-    </ClerkProvider>
-  );
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+  const content = <Shell>{children}</Shell>;
+  return <html lang="en"><body>{process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? <ClerkProvider>{content}</ClerkProvider> : content}</body></html>;
 }
+

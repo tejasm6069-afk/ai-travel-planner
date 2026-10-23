@@ -1,0 +1,10 @@
+CREATE TABLE "Trip" (
+ "id" TEXT NOT NULL,
+ "userId" TEXT NOT NULL,
+ "destination" TEXT NOT NULL,
+ "budget" TEXT NOT NULL,
+ "days" INTEGER NOT NULL,
+ "itinerary" JSONB NOT NULL,
+ "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+ CONSTRAINT "Trip_pkey" PRIMARY KEY ("id")
+);

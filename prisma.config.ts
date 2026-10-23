@@ -1,9 +1,8 @@
-import { defineConfig, env } from "@prisma/config";
+import { defineConfig } from "@prisma/config";
 import "dotenv/config";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
-  datasource: {
-    url: env("DIRECT_URL"),
-  },
+  // Client generation does not require a live database.
+  ...(process.env.DIRECT_URL ? { datasource: { url: process.env.DIRECT_URL } } : {}),
 });

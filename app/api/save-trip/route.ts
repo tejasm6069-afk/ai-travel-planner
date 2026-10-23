@@ -1,26 +1,16 @@
-// app/api/save-trip/route.ts
 import { NextResponse } from 'next/server';
 import { prisma } from '@/app/lib/prisma';
+import { tripSchema } from '@/app/lib/trip-schema';
+import { apiError, readJson, RequestError, requireUser } from '@/app/lib/api';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
   try {
-    const { destination, budget, days, itinerary } = await req.json();
-
-    const savedTrip = await prisma.trip.create({
-      data: {
-        destination,
-        budget,
-        days: Number(days),
-        itinerary, // Saves the full JSON structure
-      },
-    });
-
-    return NextResponse.json({ success: true, trip: savedTrip });
-  } catch (error) {
-    console.error("Error saving trip to database:", error);
-    return NextResponse.json(
-      { success: false, error: 'Failed to save trip to database' },
-      { status: 500 }
-    );
-  }
+    const userId = await requireUser();
+    const result = tripSchema.safeParse(await readJson(request));
+    if (!result.success) throw new RequestError(result.error.issues[0].message);
+    const { destination, budget, days, ...details } = result.data;
+    const saved = await prisma.trip.create({ data: { userId, destination, budget, days, itinerary: details }, select: { id: true } });
+    return NextResponse.json({ success: true, data: saved }, { status: 201 });
+  } catch (error) { return apiError(error, 'We couldn’t save your trip. Your itinerary is still here—please try again.'); }
 }
+

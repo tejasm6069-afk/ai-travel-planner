@@ -1,49 +1,24 @@
 'use client';
-
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Icon from '@/app/components/travel-icon';
 
-interface DeleteButtonProps {
-  tripId: string;
-}
-
-export default function DeleteButton({ tripId }: DeleteButtonProps) {
+export default function DeleteButton({ tripId }: { tripId: string }) {
+  const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState('');
   const router = useRouter();
-
-  const handleDelete = async () => {
-    if (!confirm('Are you sure you want to delete this trip?')) return;
-
-    setDeleting(true);
+  async function remove() {
+    setDeleting(true); setError('');
     try {
-      const res = await fetch('/api/delete-trip', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: tripId }),
-      });
-
-      const result = await res.json();
-
-      if (result.success) {
-        router.push('/trips');
-        router.refresh();
-      } else {
-        alert('Failed to delete trip.');
-        setDeleting(false);
-      }
-    } catch (err) {
-      alert('An error occurred.');
-      setDeleting(false);
-    }
-  };
-
-  return (
-    <button
-      onClick={handleDelete}
-      disabled={deleting}
-      className="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-4 py-2 rounded-lg font-medium text-sm transition duration-200 disabled:opacity-50"
-    >
-      {deleting ? 'Deleting...' : 'Delete Trip'}
-    </button>
-  );
+      const response = await fetch('/api/delete-trip', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: tripId }) });
+      const result = await response.json();
+      if (!response.ok || !result.success) throw new Error(result.error || 'The trip couldn’t be deleted.');
+      try { localStorage.removeItem('roam-trip-tools-' + tripId); } catch { /* Server deletion already succeeded. */ }
+      router.push('/trips'); router.refresh();
+    } catch (failure) { setError(failure instanceof Error ? failure.message : 'Please try again.'); setDeleting(false); }
+  }
+  return <div className="delete-control">{confirming ? <div className="delete-confirm"><span>Delete this saved trip permanently?</span><button className="button danger small" disabled={deleting} onClick={remove}>{deleting ? 'Deleting…' : 'Yes, delete'}</button><button className="button secondary small" disabled={deleting} onClick={() => setConfirming(false)}>Keep trip</button></div> : <button className="button secondary small" onClick={() => setConfirming(true)}><Icon name="trash" size={16} /> Delete trip</button>}{error && <p role="alert" className="error-text">{error}</p>}</div>;
 }
+
+

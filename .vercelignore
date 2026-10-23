@@ -1,0 +1,14 @@
+.env
+.env.*
+!.env.example
+.tools
+.vercel-cli-cache
+.agents
+.claude
+.windsurf
+.next
+node_modules
+test-results
+tests
+*.zip
+

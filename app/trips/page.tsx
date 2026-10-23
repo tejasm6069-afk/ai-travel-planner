@@ -1,69 +1,19 @@
-import { Trip } from '@prisma/client';
-import { prisma } from '@/app/lib/prisma';
+import { auth } from '@clerk/nextjs/server';
 import Link from 'next/link';
+import { prisma } from '@/app/lib/prisma';
+import TripLibrary from '../components/trip-library';
+import { SignInPrompt } from '../components/account';
+import Icon from '../components/travel-icon';
 
-// Notice there is NO 'use client' here. This is a Server Component!
+export const metadata = { title: 'Your adventures | roam.' };
+export const dynamic = 'force-dynamic';
 export default async function TripsDashboard() {
-  // Fetch all saved trips directly from your Supabase database, newest first
-  const trips = await prisma.trip.findMany({
-    orderBy: {
-      createdAt: 'desc',
-    },
-  });
-
-  return (
-    <main className="min-h-screen bg-slate-50 p-6 md:p-12">
-      <div className="max-w-6xl mx-auto space-y-8">
-        
-        {/* Dashboard Header */}
-        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
-            <h1 className="text-4xl font-extrabold text-slate-900">My Saved Trips</h1>
-            <p className="text-slate-600 mt-2">All your AI-generated travel itineraries in one place.</p>
-          </div>
-          <Link
-            href="/"
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg font-semibold transition whitespace-nowrap"
-          >
-            + Plan New Trip
-          </Link>
-        </header>
-
-        {/* Dynamic Trip Grid */}
-        {trips.length === 0 ? (
-          <div className="bg-white p-12 text-center rounded-xl shadow-sm border border-slate-200">
-            <p className="text-slate-500 text-lg">You haven&apos;t saved any trips yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {trips.map((trip: Trip) => (
-              <div key={trip.id} className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex flex-col h-full hover:shadow-md transition">
-                <div className="mb-4">
-                  <span className="inline-block px-3 py-1 bg-emerald-100 text-emerald-800 text-xs font-bold rounded-full mb-3 uppercase tracking-wide">
-                    {trip.days} Days • {trip.budget}
-                  </span>
-                  <h2 className="text-2xl font-bold text-slate-900 leading-tight">{trip.destination}</h2>
-                  <p className="text-slate-500 text-sm mt-2">
-                    Saved on {new Date(trip.createdAt).toLocaleDateString()}
-                  </p>
-                </div>
-
-                <div className="mt-auto pt-4 border-t border-slate-100">
-                  <p className="text-sm text-slate-600 mb-4">
-                    Fully planned day-by-day itinerary ready for your adventure.
-                  </p>
-                    <Link 
-                        href={`/trips/${trip.id}`}
-                        className="w-full block text-center bg-slate-100 hover:bg-slate-200 text-slate-800 font-medium py-2 rounded-lg transition"
-                    >
-                        View Details
-                    </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </main>
-  );
+  const { userId } = process.env.CLERK_SECRET_KEY && process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ? await auth() : { userId: null };
+  if (!userId) return <div className="empty-state account-empty"><Icon name="bag" size={45} /><p className="eyebrow">A HOME FOR YOUR ADVENTURES</p><h1>Good plans are worth keeping.</h1><p>Sign in to save your itineraries and pick up where you left off.</p><SignInPrompt>Sign in to see my trips</SignInPrompt><Link className="text-link" href="/planner">Explore the planner <Icon name="arrow" size={17} /></Link></div>;
+  let trips;
+  try { trips = await prisma.trip.findMany({ where: { userId }, orderBy: { createdAt: 'desc' }, take: 100, select: { id: true, destination: true, days: true, budget: true, createdAt: true } }); }
+  catch { return <div className="empty-state"><Icon name="info" size={38} /><h1>Your trips are taking a little longer.</h1><p>We couldn’t connect to your trip library. Please try again shortly.</p><Link className="button primary" href="/trips">Try again</Link></div>; }
+  return <><div className="page-heading"><div><p className="eyebrow">ALL YOUR POSSIBILITIES, IN ONE PLACE</p><h1>Your next great stories<span className="green">.</span></h1><p className="heading-description">Saved plans. Open possibilities. Where will you go next?</p></div><Link className="button primary" href="/planner"><Icon name="plus" size={17} /> New adventure</Link></div><TripLibrary trips={trips.map(trip => ({ ...trip, createdAt: trip.createdAt.toISOString() }))} />{trips.length === 100 && <p className="fine-print">Showing your 100 most recent trips.</p>}</>;
 }
+
+
